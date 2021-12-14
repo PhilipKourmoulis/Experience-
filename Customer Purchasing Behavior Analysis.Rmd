@@ -1,0 +1,360 @@
+---
+title: "Customer Purchasing Behavior Analysis - Final Project"
+author: "Philip Kourmoulis and Kyle Oleksak"
+date: "December 5, 2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+library(readr)
+marketing_data <- read_csv("marketing_data (phil).csv")
+View(marketing_data)
+```
+
+```{r}
+data <- marketing_data
+
+View(data)
+```
+
+
+```{r}
+summary(data)
+```
+
+
+```{r}
+boxplot(data$Total.Amount.Spent ~ data$Kidhome, data=data)
+```
+
+#Problem 1: Which customers are purchasing the most deals or discounted items?
+
+
+#Explore NumDealsPurchases
+
+```{r}
+boxplot(data$NumDealsPurchases)
+boxplot(data$Income)
+boxplot(data$Total.Amount.Spent)
+
+
+summary(data$NumDealsPurchases)
+
+```
+```{r}
+xtabs(~data$NumDealsPurchases)
+```
+```{r}
+hist(data$NumDealsPurchases)
+```
+
+#Create df and explore correlation amongst variables
+
+```{r}
+df <- data.frame(data$Age, data$Education.Level, data$Marital.Status, data$Income, data$Kidhome, data$Teenhome, data$Recency, data$Total.Amount.Spent, data$MntWines, data$MntFruits, data$MntMeatProducts, data$MntFishProducts, data$MntSweetProducts, data$MntGoldProds, data$NumDealsPurchases, data$Total.Purchases, data$NumWebPurchases, data$NumCatalogPurchases, data$NumStorePurchases, data$NumWebVisitsMonth, data$AcceptedCmp1, data$AcceptedCmp2, data$AcceptedCmp3, data$AcceptedCmp4, data$AcceptedCmp5, data$Response, data$Complain, data$Country)
+
+cor(df)
+
+#Total.Amount.Spent is comprised of MntWines, MntFruits, MntMeatProducts, MntFishProducts, MntSweetProducts and MntGoldProds. Because of this they are heavily correlated so we will  use EITHER the Total.Amount.Spent variable or the MntWines, MntFruits, MntMeatProducts, MntFishProducts, MntSweetProducts and MntGoldProds variables in our models but not BOTH. 
+#Total.Purchases is comprised of NumWebPurchases, NumCatalogPurchases, and NumStorePurchases. Because of this they are heavily correlated so we will  use EITHER the Total.Purchases variable OR NumWebPurchases, NumCatalogPurchases, and NumStorePurchases variables in our models but not BOTH.
+#It will be noted before each model which predictor variables will be used between
+```
+
+#Total.Amount.Spent will be included in this model
+#Total.Purchases will be included in this model
+
+#Summary of all data
+```{r}
+summary(data)
+```
+
+#Original Model
+```{r}
+FullModel <- lm(NumDealsPurchases~Age + Education.Level + Marital.Status + Income + Kidhome + Teenhome + Recency + Total.Amount.Spent + Total.Purchases + NumWebVisitsMonth + AcceptedCmp1 + AcceptedCmp2 + AcceptedCmp3 + AcceptedCmp3 + AcceptedCmp4 + AcceptedCmp5 + Complain + Country,  data=data)
+
+summary(FullModel)
+```
+```{r}
+library(HH)
+vif(FullModel)
+#Total.Amount.Spent and Income have too high of an inflation factor with one another so we will remove Income from our model.
+#Recency and Age have too high of a vif and must be removed as well
+```
+
+```{r}
+#We decided to transform predictors and take the log of Income and Total.Amount.Spent to remove skewness from the variables into a more normalized dataset. We also removed the variables with a high vif(). This gives us a better model fit from an Rsquared value of .3902 ---> .4244
+FullModel2 <- lm(NumDealsPurchases~Education.Level + Marital.Status + Kidhome + Teenhome + log(Total.Amount.Spent) + Total.Purchases + NumWebVisitsMonth + AcceptedCmp1 + AcceptedCmp2 + AcceptedCmp3 + AcceptedCmp3 + AcceptedCmp4 + AcceptedCmp5 + Complain + Country,  data=data)
+
+
+summary(FullModel2)
+```
+
+
+#Full Model diagnostic plot
+```{r}
+par(mfrow=c(2,2))
+plot(FullModel2)
+#We can see that there is slight linearity present in the Residuals vs Fitted plot that indicates there are nonlinear relationships present in the model. There are a few datapoints that are distant in the Residuals vs leverage plot but are not considered bad leverage points because they aren't outside the dashed line therefore aren't significantly influential.
+```
+#Backward selection
+```{r}
+#Drop AcceptedCmp4
+M1 <- lm(NumDealsPurchases~Education.Level + Marital.Status + Kidhome + Teenhome + log(Total.Amount.Spent) + Total.Purchases + NumWebVisitsMonth + AcceptedCmp1 + AcceptedCmp2 + AcceptedCmp3 + AcceptedCmp5 + Complain + Country,  data=data)
+
+summary(M1)
+```
+```{r}
+#Drop Country
+M2 <- lm(NumDealsPurchases~Education.Level + Marital.Status + Kidhome + Teenhome + log(Total.Amount.Spent) + Total.Purchases + NumWebVisitsMonth + AcceptedCmp1 + AcceptedCmp2 + AcceptedCmp3 + AcceptedCmp5 + Complain,  data=data)
+
+summary(M2)
+```
+```{r}
+#Drop Complain
+M3 <- lm(NumDealsPurchases~Education.Level + Marital.Status + Kidhome + Teenhome + log(Total.Amount.Spent) + Total.Purchases + NumWebVisitsMonth + AcceptedCmp1 + AcceptedCmp2 + AcceptedCmp3 + AcceptedCmp5,  data=data)
+
+summary(M3)
+```
+```{r}
+#Drop Marital.Status
+M4 <- lm(NumDealsPurchases~Education.Level + Kidhome + Teenhome + log(Total.Amount.Spent) + Total.Purchases + NumWebVisitsMonth + AcceptedCmp1 + AcceptedCmp2 + AcceptedCmp3 + AcceptedCmp5,  data=data)
+
+summary(M4)
+```
+```{r}
+#Drop Education level
+M5 <- lm(NumDealsPurchases~Kidhome + Teenhome + log(Total.Amount.Spent) + Total.Purchases + NumWebVisitsMonth + AcceptedCmp1 + AcceptedCmp2 + AcceptedCmp3 + AcceptedCmp5,  data=data)
+
+summary(M5)
+```
+```{r}
+#Drop Cmp2
+M6 <- lm(NumDealsPurchases~Kidhome + Teenhome + log(Total.Amount.Spent) + Total.Purchases + NumWebVisitsMonth + AcceptedCmp1 + AcceptedCmp3 + AcceptedCmp5,  data=data)
+
+summary(M6)
+```
+
+```{r}
+anova(M6)
+#In our final model we can see that Total Purchases and NumDealsPurchases cannot be differentiated with a 95% confidence level so we will remove it from our final model and have a new final model.
+```
+```{r}
+FinalModel <- lm(NumDealsPurchases~Kidhome + Teenhome + log(Total.Amount.Spent) + NumWebVisitsMonth + AcceptedCmp1 + AcceptedCmp3 + AcceptedCmp5,  data=data)
+summary(FinalModel)
+#Our predictors now explain 42.18% of the variance in NumDealsPurchases.
+```
+
+
+
+#Backward Elimination using BIC
+```{r}
+library(MASS)
+select.backward.BIC = stepAIC(FullModel2, direction = "backward", k = log(2240))
+```
+
+```{r}
+summary(select.backward.BIC)
+par(mfrow=c(2,2))
+plot(select.backward.BIC)
+```
+
+#Backward Elimination using AIC
+```{r}
+library(MASS)
+select.backward.AIC = stepAIC(FullModel2,direction = "backward")
+
+```
+```{r}
+summary(select.backward.AIC)
+par(mfrow=c(2,2))
+plot(select.backward.AIC)
+```
+#Hybrid Selection
+```{r}
+Hybrid.BIC = stepAIC(FullModel2,direction = "both",k = log(2240))
+```
+```{r}
+summary(Hybrid.BIC)
+par(mfrow=c(2,2))
+plot(Hybrid.BIC)
+```
+#The Variable selection method, Backward Elimination using AIC, gave us our optimal model. The predictors in the model are able to explain 42.38% of the variance in NumDealsPurchases
+
+#Using different predictors for problem 1 
+```{r}
+View(data)
+```
+
+```{r}
+FullModel2 <- lm(NumDealsPurchases~Age + Education.Level + Marital.Status + log(Income) + Kidhome + Teenhome + Recency + MntWines + MntFruits + MntMeatProducts + MntFishProducts + MntSweetProducts + MntGoldProds + NumWebPurchases + NumCatalogPurchases + NumStorePurchases + NumWebVisitsMonth + AcceptedCmp1 + AcceptedCmp2 + AcceptedCmp3 + AcceptedCmp3 + AcceptedCmp4 + AcceptedCmp5 + Complain + Country,  data=data)
+
+summary(FullModel2)
+
+#Multiple R-squared:  0.4062,	Adjusted R-squared:  0.3997 
+#F-statistic: 63.12 on 24 and 2215 DF,  p-value: < 2.2e-16
+```
+#Hybrid Selection
+```{r}
+Hybrid.BIC2 = stepAIC(FullModel2,direction = "both",k = log(2240))
+summary(Hybrid.BIC2)
+par(mfrow=c(2,2))
+plot(Hybrid.BIC2)
+
+#Multiple R-squared:  0.402,	Adjusted R-squared:  0.3985 
+#F-statistic: 115.1 on 13 and 2226 DF,  p-value: < 2.2e-16
+
+```
+
+#Backward Elimination using BIC
+```{r}
+library(MASS)
+select.backward.BIC2 = stepAIC(FullModel2,direction = "backward", k = log(2240))
+summary(Hybrid.BIC2)
+par(mfrow=c(2,2))
+plot(Hybrid.BIC2)
+
+
+#Multiple R-squared:  0.402,	Adjusted R-squared:  0.3985 
+#F-statistic: 115.1 on 13 and 2226 DF,  p-value: < 2.2e-16
+```
+#Optimal model for Problem 1
+```{r}
+library(MASS)
+select.backward.AIC = stepAIC(FullModel2,direction = "backward")
+summary(select.backward.AIC)
+```
+
+#Summarize this model, who is participating in the most deals?
+
+
+#----------------------------------------------------------------------------#
+
+
+
+#Next Question >>>>>>>>>>
+#What is effecting the amount spent when customers are buying the gold products?
+
+```{r}
+m1 <- lm(MntGoldProds~Age + Education.Level + Marital.Status + log(Income) + Kidhome + Teenhome + Recency + Total.Amount.Spent + Total.Purchases + NumWebVisitsMonth + AcceptedCmp1 + AcceptedCmp2 + AcceptedCmp3 + AcceptedCmp3 + AcceptedCmp4 + AcceptedCmp5 + Response + Complain + Country,  data=data)
+
+summary(m1)
+```
+#Notes on original model
+```{r}
+library(HH)
+vif(m1)
+#Total Amount spent is comprised of MntGoldProds so we will remove this from the model.
+# 
+```
+
+```{r}
+## Removed age, Total Amount Spent, recency
+m2 <- lm(MntGoldProds~Education.Level + Marital.Status + log(Income) + Kidhome + Teenhome + Total.Purchases + NumWebVisitsMonth + AcceptedCmp1 + AcceptedCmp2 + AcceptedCmp3 + AcceptedCmp3 + AcceptedCmp4 + AcceptedCmp5 + Response + Complain + Country,  data=data)
+
+summary(m2)
+```
+
+```{r}
+## in this model we dropped all insignificant predictors from m2
+m3 <- lm(MntGoldProds~Education.Level + Total.Purchases + Kidhome + AcceptedCmp3 + AcceptedCmp4 + Response, data=data)
+
+summary(m3)
+
+#This is our optimal model and it explains 31.21% of the variance in the amount of Gold or Premium products that are purchased.
+```
+
+```{r}
+par(mfrow=c(2,2))
+plot(m3)
+#There is a slight hint of linearity in the Residuals vs Fitted plot that indicates non-linearity among the variables in the model, but all the other plots look good.
+```
+
+#Exploration of our modl findings 
+```{r}
+xtabs(data$MntGoldProds~data$Education)
+#The data shows that customers with Masters and Undergraduate level education spend more than a customer with a PhD, explaining why education has a negative relationship with MntGoldProds
+```
+
+```{r}
+xtabs(data$MntGoldProds~data$AcceptedCmp3)
+
+xtabs(data$MntGoldProds~data$AcceptedCmp4)
+#We can see that people who participated in Cmp3 spend a higher proportion on goldprods than people in cmp4
+
+xtabs(data$MntGoldProds~data$Kidhome)
+#We can see that households with 1 or 2 children are spending far less on goldprods than households without children 
+```
+## next comes a multiple logistic regression 
+```{r}
+library(readr)
+ifood_data <- read_csv("marketing_data (5).csv")
+```
+
+```{r}
+#fitting a logistic regression model
+logistic_regress = glm(ifood_data$Response ~ ifood_data$Age + ifood_data$Education.Level + ifood_data$Marital.Status + ifood_data$Income + ifood_data$Kidhome + ifood_data$Teenhome + ifood_data$Total.Amount.Spent +  ifood_data$NumDealsPurchases + ifood_data$Total.Purchases + ifood_data$NumWebVisitsMonth + ifood_data$Complain + ifood_data$Country + ifood_data$Recency + ifood_data$AcceptedCmp1 + ifood_data$AcceptedCmp2 + ifood_data$AcceptedCmp3 + ifood_data$AcceptedCmp4 + ifood_data$AcceptedCmp5 + ifood_data$Country) 
+
+summary(logistic_regress)
+
+#did not include Mnt variables, used total amount spent instead; did not include web purchases, catalog or store, used total purchases instead.
+```
+```{r}
+vif(logistic_regress)
+#Total Amount Spent has a significantly high variance inflation so we will remove it from our model
+```
+```{r}
+logistic_regress2 = glm(ifood_data$Response ~ ifood_data$Age + ifood_data$Education.Level + ifood_data$Marital.Status + ifood_data$Income + ifood_data$Kidhome + ifood_data$Teenhome + ifood_data$NumDealsPurchases + ifood_data$Total.Purchases + ifood_data$NumWebVisitsMonth + ifood_data$Complain + ifood_data$Country + ifood_data$Recency + ifood_data$AcceptedCmp1 + ifood_data$AcceptedCmp2 + ifood_data$AcceptedCmp3 + ifood_data$AcceptedCmp4 + ifood_data$AcceptedCmp5 + ifood_data$Country) 
+
+summary(logistic_regress2)
+```
+
+```{r}
+##Backward Elimination
+Back.AIC = step(logistic_regress2,direction = "backward")
+```
+
+```{r}
+summary(Back.AIC)
+```
+## Education.Level, Teenhome, Income, NumDealsPurchases, NumWebVisitsMonth, Recency, AcceptedCmp1, AcceptedCmp2, AcceptedCmp3, AcceptedCmp4, AcceptedCmp5 are highly significant with very small p-values.Total. Kidhomeis, Marital status, and Age not significant.
+
+```{r}
+pred <- predict(Back.AIC, type = "response")
+pred_response <- ifelse(pred > 0.5, 1, 0)
+print(pred_response)
+```
+
+```{r}
+library(caret)
+library(InformationValue)
+library(ISLR)
+table_ea <- table(pred_response, ifood_data$Response)
+df <- data.frame(table_ea)
+table_ea
+```
+## misclassification rate = 275 / 2240 = 0.12276785714
+
+```{r}
+library(pROC)
+roc(ifood_data$Response ~ pred, plot = TRUE, print.auc = TRUE)
+```
+## running a hoslem test
+```{r}
+library(ResourceSelection)
+hoslem.test(ifood_data$Response,fitted(Back.AIC), g=10)
+```
+## the results of the hoslem test, tells us the goodness of fit for the logistic regression model.
+## The above results give us a large p-value, not a small p value. A small p value usually below .05 mean that the model is not a good fit . However large p-values don’t exactly mean that your model is a good fit, but that there's not enough evidence to deem that the model is a poor fit.
+
+
+
+```{r}
+par(mfrow=c(2,2))
+plot(logistic_regress)
+```
